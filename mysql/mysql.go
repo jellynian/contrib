@@ -2,12 +2,12 @@ package mysql
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"database/sql"
 
 	"bitbucket.org/jellynian/labchan/contrib/config"
-	log "github.com/sirupsen/logrus"
 
 	_ "github.com/go-sql-driver/mysql"
 )
