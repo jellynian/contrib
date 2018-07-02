@@ -1,8 +1,5 @@
 package: bitbucket.org/jellynian/contrib
 import:
-- package: bitbucket.org/jellynian/labchan
-  subpackages:
-  - contrib/config
 - package: github.com/go-sql-driver/mysql
   version: ^1.4.0
 - package: gopkg.in/yaml.v2

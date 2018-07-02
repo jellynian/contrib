@@ -7,16 +7,16 @@ import (
 
 	"database/sql"
 
-	"bitbucket.org/jellynian/labchan/contrib/config"
+	"bitbucket.org/jellynian/contrib/config"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var onceForLabchan sync.Once
+var onceForDefault sync.Once
 var dbForLabchan *sql.DB
 
 func Default() *sql.DB {
-	onceForLabchan.Do(func() {
+	onceForDefault.Do(func() {
 		var conf = config.Default()
 		var err error
 		user := conf.Get("mysql.user").String()
@@ -35,7 +35,7 @@ func Default() *sql.DB {
 
 		err = dbForLabchan.Ping()
 		if err != nil {
-			log.Panic(err.Error())
+			log.Panic("connect mysql failed due to:", err.Error())
 		}
 	})
 	return dbForLabchan

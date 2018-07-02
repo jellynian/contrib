@@ -14,13 +14,14 @@ import (
 )
 
 var (
-	conf   = make(map[interface{}]interface{})
-	locker sync.Mutex
-	flag   uint32 // ==1 已经读取过配置 ==0 需要重新加载配置
+	conf               = make(map[interface{}]interface{})
+	locker             sync.Mutex
+	flag               uint32 // ==1 已经读取过配置 ==0 需要重新加载配置
+	configYamlFileName = "./config.yaml"
 )
 
 type Configure interface {
-	Get(key string) *Configure
+	Get(key string) Configure
 	Interface() interface{}
 	Int() int
 	Int64() int64
@@ -33,17 +34,17 @@ type configure struct {
 	keys []string
 }
 
-func getConfigFileName() string {
-	fl.Parse()
+func init() {
 	configFlag := fl.String("config", "", "config file path")
+	fl.Parse()
 	if *configFlag != "" {
-		return *configFlag
+		configYamlFileName = *configFlag
+		return
 	}
-	config := os.Getenv("CONFIG")
-	if config != "" {
-		return config
+	configEnv := os.Getenv("CONFIG")
+	if configEnv != "" {
+		configYamlFileName = configEnv
 	}
-	return "./config.yaml"
 }
 
 func TryReload() {
@@ -62,12 +63,10 @@ func MustLoad() {
 	if atomic.LoadUint32(&flag) == 1 {
 		return
 	}
-
 	locker.Lock()
 	defer locker.Unlock()
-
 	if flag == 0 {
-		configPath := getConfigFileName()
+		configPath := configYamlFileName
 		if _, err := os.Stat(configPath); err != nil {
 			if os.IsNotExist(err) {
 				log.Panic("Config file not fund", err.Error())
@@ -84,18 +83,16 @@ func MustLoad() {
 		if err != nil {
 			log.Panic(err.Error())
 		}
-
 		atomic.StoreUint32(&flag, 1)
 	}
-
 }
 
-func Default() *configure {
+func Default() Configure {
 	MustLoad()
-	return new(configure)
+	return &configure{}
 }
 
-func (c *configure) Get(key string) *configure {
+func (c *configure) Get(key string) Configure {
 	MustLoad()
 	c.keys = strings.Split(key, ".")
 	return c
