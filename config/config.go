@@ -1,7 +1,6 @@
 package config
 
 import (
-	fl "flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -14,148 +13,140 @@ import (
 )
 
 var (
-	conf               = make(map[interface{}]interface{})
-	locker             sync.Mutex
-	flag               uint32 // ==1 已经读取过配置 ==0 需要重新加载配置
-	configYamlFileName = "./config.yaml"
+	DefaultConfigure Configure
 )
 
 type Configure interface {
-	Get(key string) Configure
-	Interface() interface{}
-	Int() int
-	Int64() int64
-	String() string
-	Float64() float64
-	Map() map[interface{}]interface{}
+	Get(key string) *ValueInterface
+	TryReload()
 }
 
 type configure struct {
-	keys []string
+	conf     map[interface{}]interface{}
+	locker   sync.Mutex
+	flag     uint32
+	filePath string
+}
+
+type ValueInterface struct {
+	value interface{}
 }
 
 func init() {
-	configFlag := fl.String("config", "", "config file path")
-	fl.Parse()
-	if *configFlag != "" {
-		configYamlFileName = *configFlag
-		return
-	}
-	configEnv := os.Getenv("CONFIG")
-	if configEnv != "" {
-		configYamlFileName = configEnv
-	}
+	DefaultConfigure = New("./config.yaml")
 }
 
-func TryReload() {
-	if atomic.LoadUint32(&flag) == 0 {
-		return
-	} else {
-		locker.Lock()
-		defer locker.Unlock()
-		if flag == 1 {
-			atomic.StoreUint32(&flag, 0)
-		}
-	}
-}
-
-func MustLoad() {
-	if atomic.LoadUint32(&flag) == 1 {
-		return
-	}
-	locker.Lock()
-	defer locker.Unlock()
-	if flag == 0 {
-		configPath := configYamlFileName
-		if _, err := os.Stat(configPath); err != nil {
-			if os.IsNotExist(err) {
-				log.Panic("Config file not fund", err.Error())
-			}
-		}
-		if configPath == "" {
-			log.Panic("config path is nil")
-		}
-		data, err := ioutil.ReadFile(configPath)
-		if err != nil {
-			log.Panic("can't read config file due to:", err.Error())
-		}
-		err = yaml.Unmarshal(data, &conf)
-		if err != nil {
-			log.Panic(err.Error())
-		}
-		atomic.StoreUint32(&flag, 1)
+func New(confPath string) Configure {
+	return &configure{
+		filePath: confPath,
 	}
 }
 
 func Default() Configure {
-	MustLoad()
-	return &configure{}
+	return DefaultConfigure
 }
 
-func (c *configure) Get(key string) Configure {
-	MustLoad()
-	c.keys = strings.Split(key, ".")
-	return c
+func TryReload() {
+	DefaultConfigure.TryReload()
 }
 
-func (c *configure) Interface() interface{} {
+func (c *configure) TryReload() {
+	if atomic.LoadUint32(&c.flag) == 0 {
+		return
+	} else {
+		c.locker.Lock()
+		defer c.locker.Unlock()
+		if c.flag == 1 {
+			atomic.StoreUint32(&c.flag, 0)
+		}
+	}
+}
+
+func (c *configure) MustLoaded() {
+	if atomic.LoadUint32(&c.flag) == 1 {
+		return
+	}
+	c.locker.Lock()
+	defer c.locker.Unlock()
+	if c.flag == 0 {
+		if c.filePath == "" {
+			panic("config path is nil")
+		}
+		if _, err := os.Stat(c.filePath); err != nil {
+			if os.IsNotExist(err) {
+				panic(err.Error())
+			}
+		}
+
+		data, err := ioutil.ReadFile(c.filePath)
+		if err != nil {
+			panic(err.Error())
+		}
+		err = yaml.Unmarshal(data, &c.conf)
+		if err != nil {
+			log.Panic(err.Error())
+		}
+		atomic.StoreUint32(&c.flag, 1)
+	}
+}
+
+func (c *configure) Get(key string) *ValueInterface {
+	c.MustLoaded()
 	var (
 		ok    bool
-		value = conf
+		value = c.conf
 		cKeys []string
 	)
-
-	lenKeys := len(c.keys)
-
-	cKeys = c.keys[:lenKeys-1]
-
+	keys := strings.Split(key, ".")
+	cKeys = keys[:len(keys)-1]
 	for _, v := range cKeys {
 		value, ok = value[v].(map[interface{}]interface{})
 		if !ok {
-			panic(fmt.Sprintf("key %s not fund from Configure file ", v))
+			panic(fmt.Sprintf("key %s is not map[interface{}]interface{} ", v))
 		}
 	}
-	v := value[c.keys[lenKeys-1]]
-	return v
+	return &ValueInterface{
+		value: value[keys[len(keys)-1]],
+	}
 }
 
-func (c *configure) String() string {
+func (c *ValueInterface) String() string {
 
-	v, ok := c.Interface().(string)
+	v, ok := c.value.(string)
 	if !ok {
-		panic(fmt.Sprintf("value %v is not string", c.Interface()))
+		panic(fmt.Sprintf("Value %v is not string", c.value))
 	}
 	return v
 }
 
-func (c *configure) Int64() int64 {
-	v, ok := c.Interface().(int64)
+func (c *ValueInterface) Int64() int64 {
+	v, ok := c.value.(int64)
 	if !ok {
-		panic(fmt.Sprintf("value %v is not int64", c.Interface()))
+		panic(fmt.Sprintf("Value %v is not int64", c.value))
 	}
 	return v
 }
 
-func (c *configure) Int() int {
-	v, ok := c.Interface().(int)
+func (c *ValueInterface) Int() int {
+	v, ok := c.value.(int)
 	if !ok {
-		panic(fmt.Sprintf("value %v is not int", c.Interface()))
+		panic(fmt.Sprintf("Value %v is not int", c.value))
 	}
 	return v
 }
 
-func (c *configure) Float64() float64 {
-	v, ok := c.Interface().(float64)
+func (c *ValueInterface) Float64() float64 {
+	v, ok := c.value.(float64)
 	if !ok {
-		panic(fmt.Sprintf("value %v is not float64", c.Interface()))
+		panic(fmt.Sprintf("Value %v is not float64", c.value))
 	}
 	return v
 }
 
-func (c *configure) Map() map[interface{}]interface{} {
-	v, ok := c.Interface().(map[interface{}]interface{})
+func (c *ValueInterface) Map() map[interface{}]interface{} {
+	v, ok := c.value.(map[interface{}]interface{})
 	if !ok {
-		panic(fmt.Sprintf("value %v is not map[interface{}]interface{}", c.Interface()))
+		panic(fmt.Sprintf("Value %v is not map[interface{}]interface{}", c.value))
 	}
 	return v
 }
