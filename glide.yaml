@@ -1,6 +1,0 @@
-package: bitbucket.org/jellynian/contrib
-import:
-- package: github.com/go-sql-driver/mysql
-  version: ^1.4.0
-- package: gopkg.in/yaml.v2
-  version: ^2.2.1
