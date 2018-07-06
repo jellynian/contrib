@@ -2,12 +2,13 @@ package mysql
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	"database/sql"
 
 	"bitbucket.org/jellynian/contrib/config"
+
+	"bitbucket.org/jellynian/contrib/log"
 
 	_ "github.com/go-sql-driver/mysql"
 )

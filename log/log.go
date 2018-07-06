@@ -95,22 +95,19 @@ func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int, l
 	}
 
 	if l.flag&(Ldebug|Linfo|Lwarn|Lerror|Lpanic) != 0 {
-
-		if level != 0 {
-			switch level {
-			case Ldebug:
-				*buf = append(*buf, []byte(" DEBUG ")...)
-			case Linfo:
-				*buf = append(*buf, []byte(" INFO ")...)
-			case Lwarn:
-				*buf = append(*buf, []byte(" WARN ")...)
-			case Lerror:
-				*buf = append(*buf, []byte(" ERROR ")...)
-			case Lpanic:
-				*buf = append(*buf, []byte(" PANIC ")...)
-			default:
-				*buf = append(*buf, []byte(" UNKNOWN ")...)
-			}
+		switch level {
+		case Ldebug:
+			*buf = append(*buf, []byte(" DEBUG ")...)
+		case Linfo:
+			*buf = append(*buf, []byte(" INFO ")...)
+		case Lwarn:
+			*buf = append(*buf, []byte(" WARN ")...)
+		case Lerror:
+			*buf = append(*buf, []byte(" ERROR ")...)
+		case Lpanic:
+			*buf = append(*buf, []byte(" PANIC ")...)
+		default:
+			*buf = append(*buf, []byte(" UNKNOWN ")...)
 		}
 	}
 
@@ -173,12 +170,12 @@ func (l *Logger) Output(calldepth int, level int, s string) error {
 // Printf calls l.Output to print to the logger.
 // Arguments are handled in the manner of fmt.Printf.
 func (l *Logger) Printf(format string, v ...interface{}) {
-	l.Output(2, 0, fmt.Sprintf(format, v...))
+	l.Output(2, Linfo, fmt.Sprintf(format, v...))
 }
 
 // Print calls l.Output to print to the logger.
 // Arguments are handled in the manner of fmt.Print.
-func (l *Logger) Print(v ...interface{}) { l.Output(2, 0, fmt.Sprint(v...)) }
+func (l *Logger) Print(v ...interface{}) { l.Output(2, Linfo, fmt.Sprint(v...)) }
 
 // Println calls l.Output to print to the logger.
 // Arguments are handled in the manner of fmt.Println.
@@ -186,19 +183,19 @@ func (l *Logger) Println(v ...interface{}) { l.Output(2, Linfo, fmt.Sprintln(v..
 
 // Fatal is equivalent to l.Print() followed by a call to os.Exit(1).
 func (l *Logger) Fatal(v ...interface{}) {
-	l.Output(2, 0, fmt.Sprint(v...))
+	l.Output(2, Lerror, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 // Fatalf is equivalent to l.Printf() followed by a call to os.Exit(1).
 func (l *Logger) Fatalf(format string, v ...interface{}) {
-	l.Output(2, 0, fmt.Sprintf(format, v...))
+	l.Output(2, Lerror, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 // Fatalln is equivalent to l.Println() followed by a call to os.Exit(1).
 func (l *Logger) Fatalln(v ...interface{}) {
-	l.Output(2, 0, fmt.Sprintln(v...))
+	l.Output(2, Lerror, fmt.Sprintln(v...))
 	os.Exit(1)
 }
 
