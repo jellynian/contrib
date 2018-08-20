@@ -6,9 +6,9 @@ import (
 
 	"database/sql"
 
-	"bitbucket.org/jellynian/contrib/config"
+	"github.com/jellynian/contrib/config"
 
-	"bitbucket.org/jellynian/contrib/log"
+	"github.com/jellynian/contrib/log"
 
 	_ "github.com/go-sql-driver/mysql"
 )
